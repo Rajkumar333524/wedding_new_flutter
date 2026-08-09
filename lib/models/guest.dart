@@ -5,10 +5,10 @@ part 'guest.g.dart';
 @HiveType(typeId: 1)
 class Guest {
   @HiveField(0)
-  final int localId;        // 🔵 Hive local id
+  final int localId;
 
   @HiveField(1)
-  final int backendId;     // 🟢 Django primary key
+  final int backendId;
 
   @HiveField(2)
   final int weddingId;
@@ -34,6 +34,9 @@ class Guest {
   @HiveField(9)
   final double given;
 
+  @HiveField(12)
+  final double taken;
+
   @HiveField(10)
   final String type;
 
@@ -51,42 +54,140 @@ class Guest {
     required this.giftEn,
     required this.giftHi,
     required this.given,
+    required this.taken,
     required this.type,
     required this.date,
   });
 
-  // 🔄 JSON → Dart
-  factory Guest.fromJson(Map<String, dynamic> j) => Guest(
-        localId: DateTime.now().millisecondsSinceEpoch,   // local only
-        backendId: j['id'],                              // real DB id
-        weddingId: j['wedding_id'],
-        nameEn: j['name_en'] ?? '',
-        nameHi: j['name_hi'] ?? '',
-        addressEn: j['address_en'] ?? '',
-        addressHi: j['address_hi'] ?? '',
-        giftEn: j['gift_en'] ?? '',
-        giftHi: j['gift_hi'] ?? '',
-        given: double.tryParse(j['given'].toString()) ?? 0,
-        type: (j['type'] ?? 'Given').toString(),
-        date: j['date'] != null
-            ? DateTime.tryParse(j['date'].toString()) ?? DateTime.now()
-            : DateTime.now(),
-      );
+  // ============================================================
+  // BACKEND → APP
+  // Supports both old Django fields and new Flutter fields
+  // ============================================================
 
-  // 🔄 Dart → JSON (for API)
-  Map<String, dynamic> toJson() => {
-        "id": backendId,               // 🧠 very important
-        "wedding_id": weddingId,
-        "name_en": nameEn,
-        "name_hi": nameHi,
-        "address_en": addressEn,
-        "address_hi": addressHi,
-        "gift_en": giftEn,
-        "gift_hi": giftHi,
-        "given": given,
-        "type": type,
-        "date": date.toIso8601String(),
-      };
+  factory Guest.fromJson(Map<String, dynamic> j) {
+    final int parsedBackendId =
+        int.tryParse(j['id']?.toString() ?? '0') ?? 0;
+
+    final int parsedWeddingId =
+        int.tryParse(j['wedding_id']?.toString() ?? '0') ?? 0;
+
+    final int parsedLocalId =
+        int.tryParse(j['local_id']?.toString() ?? '0') ??
+        (parsedBackendId > 0
+            ? parsedBackendId
+            : DateTime.now().millisecondsSinceEpoch);
+
+    final double amount =
+        double.tryParse(
+              j['given']?.toString() ??
+                  j['amount']?.toString() ??
+                  '0',
+            ) ??
+            0;
+
+    final double takenAmount =
+        double.tryParse(
+              j['taken']?.toString() ?? '0',
+            ) ??
+            0;
+
+    return Guest(
+      localId: parsedLocalId,
+
+      backendId: parsedBackendId,
+
+      weddingId: parsedWeddingId,
+
+      nameEn:
+          j['name_en']?.toString() ??
+          j['name']?.toString() ??
+          '',
+
+      nameHi:
+          j['name_hi']?.toString() ??
+          j['name']?.toString() ??
+          '',
+
+      addressEn:
+          j['address_en']?.toString() ??
+          j['address']?.toString() ??
+          '',
+
+      addressHi:
+          j['address_hi']?.toString() ??
+          j['address']?.toString() ??
+          '',
+
+      giftEn:
+          j['gift_en']?.toString() ??
+          j['gift']?.toString() ??
+          '',
+
+      giftHi:
+          j['gift_hi']?.toString() ??
+          j['gift']?.toString() ??
+          '',
+
+      given: amount,
+
+      taken: takenAmount,
+
+      type:
+          j['type']?.toString() ??
+          'Given',
+
+      date: j['date'] != null
+          ? DateTime.tryParse(
+                j['date'].toString(),
+              ) ??
+              DateTime.now()
+          : DateTime.now(),
+    );
+  }
+
+  // ============================================================
+  // APP → BACKEND
+  // Compatible with current Django Guest API
+  // ============================================================
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': backendId,
+      'wedding_id': weddingId,
+
+      // Current Django backend fields
+      'name': nameEn.isNotEmpty
+          ? nameEn
+          : nameHi,
+
+      'address': addressEn.isNotEmpty
+          ? addressEn
+          : addressHi,
+
+      'gift': giftEn.isNotEmpty
+          ? giftEn
+          : giftHi,
+
+      'amount': given,
+
+      // Extra fields can remain available
+      // for a future upgraded backend.
+      'name_en': nameEn,
+      'name_hi': nameHi,
+      'address_en': addressEn,
+      'address_hi': addressHi,
+      'gift_en': giftEn,
+      'gift_hi': giftHi,
+      'given': given,
+      'taken': taken,
+      'type': type,
+      'date': date.toIso8601String(),
+    };
+  }
+
+  // ============================================================
+  // COPY WITH
+  // ============================================================
 
   Guest copyWith({
     int? localId,
@@ -99,6 +200,7 @@ class Guest {
     String? giftEn,
     String? giftHi,
     double? given,
+    double? taken,
     String? type,
     DateTime? date,
   }) {
@@ -113,6 +215,7 @@ class Guest {
       giftEn: giftEn ?? this.giftEn,
       giftHi: giftHi ?? this.giftHi,
       given: given ?? this.given,
+      taken: taken ?? this.taken,
       type: type ?? this.type,
       date: date ?? this.date,
     );

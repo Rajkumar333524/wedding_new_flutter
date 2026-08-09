@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../premium/export_screen.dart';
 import '../rituals/ritual_home_screen.dart';
 import '../ui/background_wrapper.dart';
@@ -7,6 +8,11 @@ import '../models/wedding.dart';
 import '../services/api_service.dart';
 import '../services/export_service.dart';
 import '../widgets/wedding_card.dart';
+
+import '../widgets/action_button.dart';
+import '../widgets/info_card.dart';
+import '../widgets/search_box.dart';
+
 import 'guest_list_screen.dart';
 
 class WeddingListScreen extends StatefulWidget {
@@ -20,38 +26,93 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
   List<Wedding> weddings = [];
   List<Wedding> filtered = [];
 
-  final TextEditingController search = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   bool loading = true;
+
+  String currentUser = "Admin";
+  DateTime now = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _load();
+    loadWeddings();
+  }
+    @override
+  void dispose() {
+    searchController.dispose();
+
+    super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => loading = true);
+  Future<void>  loadWeddings() async {
+     setState(() {
+      loading = true;
+    });
 
     try {
-      final data = await ApiService.getWeddings();
-      if (!mounted) return;
-      weddings = data;
-      filtered = data;
+        weddings = await ApiService.getWeddings();
+
+      filtered = weddings;
+
     } catch (e) {
-      debugPrint("Wedding load error: $e");
+     debugPrint(e.toString());
+
+      if (mounted) {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+
+          SnackBar(
+            content: Text(
+              "Failed to load weddings\n$e",
+            ),
+          ),
+
+        );
+
+      }
+
     }
 
-    if (mounted) setState(() => loading = false);
+    if (mounted) {
+
+      setState(() {
+        loading = false;
+      });
+
+    }
+
   }
 
-  void _filter(String text) {
-    final t = text.toLowerCase();
+   void searchWedding(String value) {
+
+    final text = value.toLowerCase();
+
     setState(() {
-      filtered = weddings.where((w) {
-        final name = "${w.groomNameHi} ${w.brideNameHi}".toLowerCase();
-        return name.contains(t);
+
+      filtered = weddings.where((item) {
+
+        return item.groomNameHi
+                .toLowerCase()
+                .contains(text) ||
+
+            item.brideNameHi
+                .toLowerCase()
+                .contains(text);
+
       }).toList();
+
     });
+
+  }
+    int get totalWedding {
+
+    return weddings.length;
+
+  }
+     int get showingWedding {
+
+    return filtered.length;
+
   }
 
   @override
@@ -61,11 +122,13 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
         backgroundColor: Colors.transparent,
 
         floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: Colors.deepOrange,
+          foregroundColor: Colors.white,
           icon: const Icon(Icons.add),
           label: const Text("नया विवाह"),
           onPressed: () async {
             await Navigator.pushNamed(context, '/add-wedding');
-            _load();
+            loadWeddings();
           },
         ),
 
@@ -80,27 +143,89 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
               height: 400,
               child: GlassPanel(
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center( child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                       children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 12),
+                        Text(
+                        "Loading Wedding Data...",
+                      ),
+                    ],
+                  ),
+                )
                     : Column(
                         children: [
 
                           // HEADER
-                          Container(
-                            height: 60, // 🔧 reduced
-                            alignment: Alignment.center,
-                            child: const Text(
-                              "शुभ विवाह रजिस्टर",
-                              style: TextStyle(
-                                fontSize: 16, // 🔧 reduced
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFFFE0A3),
-                                shadows: [
-                                  Shadow(color: Colors.black54, offset: Offset(1,1), blurRadius: 3)
-                                ],
-                              ),
-                            ),
+                         Container(
+                          padding: const EdgeInsets.symmetric(
+                           horizontal: 15,
+                           vertical: 10,
                           ),
+                           child: Row(
+                           children: [
 
+                            const Icon(
+                                Icons.favorite,
+                             color: Colors.red,
+                             size: 32,
+                            ),
+
+                           const SizedBox(width: 12),
+
+                           const Expanded(
+                           child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                          Text(
+                         "Wedding Register Pro",
+                         style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                         color: Color(0xFFFFE0A3),
+                        ),
+                      ),
+
+                       Text(
+                       "Professional Wedding Management",
+                       style: TextStyle(
+                       fontSize: 12,
+                       color: Colors.white70,
+                      ),
+                    ),
+
+                  ],
+               ),
+            ),
+
+             Column(
+             crossAxisAlignment: CrossAxisAlignment.end,
+             children: [
+
+              Text(
+              currentUser,
+              style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          Text(
+            "${now.day}/${now.month}/${now.year}",
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+            ),
+          ),
+
+        ],
+      )
+
+    ],
+  ),
+),
                           const Divider(height: 1),
 
                           // ACTION BUTTONS
@@ -110,22 +235,45 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  _btn(Icons.refresh, "Reload", _load),
-                                  _btn(Icons.auto_awesome, "Rituals", () {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => const RitualHomeScreen()));
-                                  }),
-                                  _btn(Icons.workspace_premium, "Export", () {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ExportScreen()));
-                                  }),
-                                  _btn(Icons.table_chart, "Excel", () {
-                                    ExportService.exportWeddingsToExcel(weddings);
-                                  }),
-                                  _btn(Icons.picture_as_pdf, "PDF", () {
-                                    if (weddings.isNotEmpty) {
-                                      ExportService.exportWeddingPdf(weddings.first);
-                                    }
-                                  }),
-                                  _btn(Icons.print, "Print", () {
+                                  ActionButton(
+                                  icon: Icons.refresh,
+                                   title: "Reload",
+                                    onPressed: loadWeddings,
+                                   ),
+                                  ActionButton(
+                                    icon: Icons.auto_awesome,
+                                    title: "Rituals",
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RitualHomeScreen()));
+                                    },
+                                  ),
+                                  ActionButton(
+                                    icon: Icons.workspace_premium,
+                                    title: "Export",
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ExportScreen()));
+                                    },
+                                  ),
+                                  ActionButton(
+                                    icon: Icons.table_chart,
+                                    title: "Excel",
+                                    onPressed: () {
+                                      ExportService.exportWeddingsToExcel(weddings);
+                                    },
+                                  ),
+                                  ActionButton(
+                                    icon: Icons.picture_as_pdf,
+                                    title: "PDF",
+                                    onPressed: () {
+                                      if (weddings.isNotEmpty) {
+                                        ExportService.exportWeddingPdf(weddings.first);
+                                      }
+                                    },
+                                  ),
+                                  ActionButton(
+                                    icon: Icons.print,
+                                    title: "Print",
+                                    onPressed: () {
                                     if (weddings.isNotEmpty) {
                                       ExportService.printWedding(weddings.first);
                                     }
@@ -138,19 +286,10 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
                           // SEARCH
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: TextField(
-                              controller: search,
-                              onChanged: _filter,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.search, size: 12), // 🔧 reduced
-                                hintText: "विवाह खोजें...",
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 6), // 🔧 reduced
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
+                            child: SearchBox(
+                              controller: searchController,
+                              onChanged:  searchWedding,
+                              hint: "विवाह खोजें...",
                             ),
                           ),
 
@@ -160,21 +299,50 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                _info("कुल विवाह", weddings.length.toString()),
-                                _info("दिखाये गये", filtered.length.toString()),
+                                 InfoCard(
+                                  title: "Total Wedding",
+                                  value: totalWedding.toString(),
+                                   icon: Icons.favorite,
+                                    color: Colors.red,
+                                     ),
+                                     const SizedBox(width: 10),
+                                     InfoCard(
+                                      title: "Showing",
+                                       value: showingWedding.toString(),
+                                       icon: Icons.visibility,
+                                        color: Colors.green,
+                                     ),
                               ],
                             ),
                           ),
-
-                          const SizedBox(height: 4), // 🔧 reduced
 
                           // LIST
                           Expanded(
                             child: Scrollbar(
                               thumbVisibility: true,
-                              child: ListView.builder(
+                              child: filtered.isEmpty
+                             ? const Center(
+                              child: Column(
+                             mainAxisAlignment: MainAxisAlignment.center,
+                             children: [
+                             Icon(
+                             Icons.search_off,
+                              size: 60,
+                              color: Colors.grey,
+                          ),
+                             SizedBox(height: 10),
+                             Text(
+                             "No Wedding Found",
+                              style: TextStyle(
+                             fontSize: 18,
+                             fontWeight: FontWeight.bold,
+                           ),
+                         ),
+                       ],
+                     ),
+                   )
+                   : ListView.builder(
                                 padding: const EdgeInsets.symmetric(horizontal: 6),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, i) {
@@ -185,11 +353,11 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
                                       wedding: w,
                                       onOpen: () async {
                                         await Navigator.push(context, MaterialPageRoute(builder: (_) => GuestListScreen(wedding: w)));
-                                        _load();
+                                        loadWeddings();
                                       },
                                       onDelete: () async {
                                         await ApiService.deleteWedding(w.id);
-                                        _load();
+                                        loadWeddings();
                                       },
                                     ),
                                   );
@@ -238,7 +406,7 @@ class _WeddingListScreenState extends State<WeddingListScreen> {
         height: 34, // 🔧 reduced
         color: Colors.brown.shade700,
         child: const Center(
-          child: Text("Wedding Register App • Powered by You", style: TextStyle(color: Colors.white)),
+          child: Text("Wedding Register Pro v2 • Developed by Raj Kumar Pal", style: TextStyle(color: Colors.white)),
         ),
       );
 }

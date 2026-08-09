@@ -13,57 +13,127 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController phone = TextEditingController();
+  final TextEditingController password = TextEditingController();
 
-  final phone = TextEditingController();
-  final password = TextEditingController();
-
-  // 🔑 Keyboard focus
-  final f1 = FocusNode();
-  final f2 = FocusNode();
+  // Keyboard focus
+  final FocusNode f1 = FocusNode();
+  final FocusNode f2 = FocusNode();
 
   bool loading = false;
   bool isRegister = false;
-  bool isForgot = false;
+
+  @override
+  void dispose() {
+    phone.dispose();
+    password.dispose();
+    f1.dispose();
+    f2.dispose();
+    super.dispose();
+  }
+
+  // ============================================================
+  // SUBMIT
+  // ============================================================
 
   Future<void> submit() async {
-    if (phone.text.isEmpty || (!isForgot && password.text.isEmpty)) {
-      message("Please fill required fields");
+    final phoneText = phone.text.trim();
+    final passwordText = password.text.trim();
+
+    if (phoneText.isEmpty) {
+      message('Please enter mobile number.');
       return;
     }
 
-    setState(() => loading = true);
+    if (passwordText.isEmpty) {
+      message('Please enter password.');
+      return;
+    }
+
+    if (passwordText.length < 6) {
+      message('Password must be at least 6 characters.');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+    });
 
     try {
-      if (isForgot) {
-        await AuthService.forgot(phone.text.trim());
-        message("Password reset link sent");
-      }
-      else if (isRegister) {
-        await AuthService.register(phone.text.trim(), password.text.trim());
-        message("Account created. Please login.");
-        setState(() => isRegister = false);
-      }
-      else {
-        await AuthService.login(phone.text.trim(), password.text.trim());
+      if (isRegister) {
+        // ============================
+        // REGISTER
+        // ============================
+
+        await AuthService.register(
+          phoneText,
+          passwordText,
+        );
+
+        if (!mounted) return;
+
+        message(
+          'Account created successfully. Please login.',
+        );
+
+        setState(() {
+          isRegister = false;
+        });
+      } else {
+        // ============================
+        // LOGIN
+        // ============================
+
+        await AuthService.login(
+          phoneText,
+          passwordText,
+        );
+
         if (!mounted) return;
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const WeddingListScreen()),
+          MaterialPageRoute(
+            builder: (_) => const WeddingListScreen(),
+          ),
         );
       }
     } catch (e) {
-      message("Error: $e");
+      if (!mounted) return;
+
+      String error = e.toString();
+
+      if (error.startsWith('Exception: ')) {
+        error = error.substring(11);
+      }
+
+      message(error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    if (mounted) setState(() => loading = false);
   }
 
-  void message(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(m)),
-    );
+  // ============================================================
+  // MESSAGE
+  // ============================================================
+
+  void message(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+        ),
+      );
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -72,37 +142,61 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.transparent,
 
         body: Center(
-          child: GlassPanel(
-            child: Container(
-              width: 400,
-              padding: const EdgeInsets.all(26),
-              decoration: _card(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: GlassPanel(
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(26),
+                decoration: _card(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ============================
+                    // TITLE
+                    // ============================
 
-                  const Text(
-                    "Wedding Register",
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text("Secure Login",
-                      style: TextStyle(color: Colors.black54)),
+                    const Text(
+                      'Wedding Register',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 6),
 
-                  _field(
-                    "Mobile Number",
-                    phone,
-                    f1,
-                    f2,
-                    TextInputType.phone,
-                  ),
+                    Text(
+                      isRegister
+                          ? 'Create New Account'
+                          : 'Secure Login',
+                      style: const TextStyle(
+                        color: Colors.black54,
+                      ),
+                    ),
 
-                  if (!isForgot) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 24),
+
+                    // ============================
+                    // PHONE
+                    // ============================
+
                     _field(
-                      "Password",
+                      'Mobile Number',
+                      phone,
+                      f1,
+                      f2,
+                      TextInputType.phone,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ============================
+                    // PASSWORD
+                    // ============================
+
+                    _field(
+                      'Password',
                       password,
                       f2,
                       null,
@@ -110,53 +204,80 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscure: true,
                       last: true,
                     ),
-                  ],
 
-                  const SizedBox(height: 26),
+                    const SizedBox(height: 26),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: _goldButton(),
-                      onPressed: loading ? null : submit,
-                      child: loading
-                          ? const CircularProgressIndicator(color: Colors.black)
-                          : Text(
-                              isForgot
-                                  ? "Reset Password"
-                                  : isRegister
-                                      ? "Create Account"
-                                      : "Login",
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
+                    // ============================
+                    // MAIN BUTTON
+                    // ============================
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: _goldButton(),
+                        onPressed: loading ? null : submit,
+                        child: loading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : Text(
+                                isRegister
+                                    ? 'Create Account'
+                                    : 'Login',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        isRegister = !isRegister;
-                        isForgot = false;
-                      });
-                    },
-                    child: Text(isRegister
-                        ? "Already have account? Login"
-                        : "Create new account"),
-                  ),
+                    // ============================
+                    // LOGIN / REGISTER SWITCH
+                    // ============================
 
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        isForgot = !isForgot;
-                        isRegister = false;
-                      });
-                    },
-                    child: const Text("Forgot Password"),
-                  ),
-                ],
+                    TextButton(
+                      onPressed: loading
+                          ? null
+                          : () {
+                              setState(() {
+                                isRegister = !isRegister;
+                                phone.clear();
+                                password.clear();
+                              });
+                            },
+                      child: Text(
+                        isRegister
+                            ? 'Already have account? Login'
+                            : 'Create new account',
+                      ),
+                    ),
+
+                    // ============================
+                    // FORGOT PASSWORD
+                    // ============================
+
+                    TextButton(
+                      onPressed: loading
+                          ? null
+                          : () {
+                              message(
+                                'Forgot Password is not available yet.',
+                              );
+                            },
+                      child: const Text(
+                        'Forgot Password',
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -165,17 +286,26 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ================= UI HELPERS =================
+  // ============================================================
+  // TEXT FIELD
+  // ============================================================
 
-  Widget _field(String label, TextEditingController c,
-      FocusNode current, FocusNode? next, TextInputType type,
-      {bool obscure = false, bool last = false}) {
+  Widget _field(
+    String label,
+    TextEditingController controller,
+    FocusNode current,
+    FocusNode? next,
+    TextInputType type, {
+    bool obscure = false,
+    bool last = false,
+  }) {
     return TextField(
-      controller: c,
+      controller: controller,
       focusNode: current,
       keyboardType: type,
       obscureText: obscure,
-      textInputAction: last ? TextInputAction.done : TextInputAction.next,
+      textInputAction:
+          last ? TextInputAction.done : TextInputAction.next,
       onSubmitted: (_) {
         if (next != null) {
           FocusScope.of(context).requestFocus(next);
@@ -187,25 +317,46 @@ class _LoginScreenState extends State<LoginScreen> {
         labelText: label,
         filled: true,
         fillColor: Colors.white.withOpacity(0.9),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }
 
-  ButtonStyle _goldButton() => ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFD4AF37),
-        foregroundColor: Colors.black,
-        elevation: 14,
-        shadowColor: Colors.black54,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      );
+  // ============================================================
+  // BUTTON STYLE
+  // ============================================================
 
-  BoxDecoration _card() => BoxDecoration(
-        color: Colors.white.withOpacity(0.88),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black38, blurRadius: 20),
-        ],
-      );
+  ButtonStyle _goldButton() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFFD4AF37),
+      foregroundColor: Colors.black,
+      elevation: 14,
+      shadowColor: Colors.black54,
+      padding: const EdgeInsets.symmetric(
+        vertical: 16,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+
+  // ============================================================
+  // CARD STYLE
+  // ============================================================
+
+  BoxDecoration _card() {
+    return BoxDecoration(
+      color: Colors.white.withOpacity(0.88),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black38,
+          blurRadius: 20,
+        ),
+      ],
+    );
+  }
 }

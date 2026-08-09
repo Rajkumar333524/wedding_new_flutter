@@ -1,17 +1,27 @@
 import 'package:hive/hive.dart';
+
 import '../models/guest.dart';
 
 class HiveService {
-  static const String _boxName = "guestBox";
+  static const String _boxName = 'guestBox';
+
   static bool _initialized = false;
 
-  static Future<void> init() async {
-    if (_initialized && Hive.isBoxOpen(_boxName)) return;
+  // ============================================================
+  // INITIALIZE HIVE
+  // ============================================================
 
+  static Future<void> init() async {
+    if (_initialized && Hive.isBoxOpen(_boxName)) {
+      return;
+    }
+
+    // Register Guest adapter only once
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(GuestAdapter());
     }
 
+    // Open guest box
     if (!Hive.isBoxOpen(_boxName)) {
       await Hive.openBox<Guest>(_boxName);
     }
@@ -19,21 +29,83 @@ class HiveService {
     _initialized = true;
   }
 
-  static Box<Guest> get _box => Hive.box<Guest>(_boxName);
+  // ============================================================
+  // BOX
+  // ============================================================
 
-  static List<Guest> getGuestsByWedding(int weddingId) {
-    return _box.values.where((g) => g.weddingId == weddingId).toList();
+  static Box<Guest> get _box {
+    if (!Hive.isBoxOpen(_boxName)) {
+      throw Exception(
+        'Guest Hive box is not initialized.',
+      );
+    }
+
+    return Hive.box<Guest>(_boxName);
   }
 
-  static Future<void> addGuest(Guest guest) async {
-    await _box.put(guest.id, guest);
+  // ============================================================
+  // GET GUESTS BY WEDDING
+  // ============================================================
+
+  static List<Guest> getGuestsByWedding(
+    int weddingId,
+  ) {
+    return _box.values
+        .where(
+          (guest) => guest.weddingId == weddingId,
+        )
+        .toList();
   }
 
-  static Future<void> updateGuest(Guest guest) async {
-    await _box.put(guest.id, guest);
+  // ============================================================
+  // GET ALL GUESTS
+  // ============================================================
+
+  static List<Guest> getAllGuests() {
+    return _box.values.toList();
   }
 
-  static Future<void> deleteGuest(int id) async {
-    await _box.delete(id);
+  // ============================================================
+  // ADD GUEST
+  // ============================================================
+
+  static Future<void> addGuest(
+    Guest guest,
+  ) async {
+    await _box.put(
+      guest.localId,
+      guest,
+    );
+  }
+
+  // ============================================================
+  // UPDATE GUEST
+  // ============================================================
+
+  static Future<void> updateGuest(
+    Guest guest,
+  ) async {
+    await _box.put(
+      guest.localId,
+      guest,
+    );
+  }
+
+  // ============================================================
+  // DELETE GUEST
+  // ============================================================
+
+  static Future<void> deleteGuest(
+    int localId,
+  ) async {
+    await _box.delete(localId);
+  }
+
+  // ============================================================
+  // CLEAR ALL GUESTS
+  // ============================================================
+
+  static Future<void> clearAllGuests() async {
+    await _box.clear();
   }
 }

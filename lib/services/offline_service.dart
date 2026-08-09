@@ -1,58 +1,100 @@
-import 'dart:convert';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
+
 import '../models/guest.dart';
 
 class OfflineService {
-  static const String boxName = "guestBox";
+  static const String boxName = 'guestBox';
 
-  // 🔹 App start pe call
+  // ============================================================
+  // INIT
+  // ============================================================
+
   static Future<void> init() async {
-    await Hive.initFlutter();
-    await Hive.openBox(boxName);
+    if (!Hive.isBoxOpen(boxName)) {
+      await Hive.openBox<Guest>(boxName);
+    }
   }
 
-  // 📥 Load all guests
+  // ============================================================
+  // BOX
+  // ============================================================
+
+  static Box<Guest> get _box {
+    if (!Hive.isBoxOpen(boxName)) {
+      throw Exception(
+        'Guest Hive box is not initialized.',
+      );
+    }
+
+    return Hive.box<Guest>(boxName);
+  }
+
+  // ============================================================
+  // LOAD ALL GUESTS
+  // ============================================================
+
   static List<Guest> loadGuests() {
-    final box = Hive.box(boxName);
-    return box.values
-        .map((e) => Guest.fromJson(Map<String, dynamic>.from(jsonDecode(e))))
-        .toList();
+    return _box.values.toList();
   }
 
-  // ➕ Add / Update guest
-  static void saveGuest(Guest g) {
-    final box = Hive.box(boxName);
-    box.put(g.id, jsonEncode(g.toJson()));
+  // ============================================================
+  // ADD / UPDATE GUEST
+  // ============================================================
+
+  static Future<void> saveGuest(Guest guest) async {
+    await _box.put(
+      guest.localId,
+      guest,
+    );
   }
 
-  // 🗑 Delete guest
-  static void deleteGuest(int id) {
-    final box = Hive.box(boxName);
-    box.delete(id);
+  // ============================================================
+  // DELETE GUEST
+  // ============================================================
+
+  static Future<void> deleteGuest(int localId) async {
+    await _box.delete(localId);
   }
 
-  // 🧹 Clear all data (Reset)
-  static void clearAll() {
-    final box = Hive.box(boxName);
-    box.clear();
+  // ============================================================
+  // CLEAR ALL DATA
+  // ============================================================
+
+  static Future<void> clearAll() async {
+    await _box.clear();
   }
 
-  // 📊 Dashboard calculations
+  // ============================================================
+  // DASHBOARD CALCULATIONS
+  // ============================================================
+
   static double totalGiven(int weddingId) {
     return loadGuests()
-        .where((g) => g.weddingId == weddingId)
-        .fold(0, (s, g) => s + g.given);
+        .where(
+          (guest) => guest.weddingId == weddingId,
+        )
+        .fold(
+          0.0,
+          (sum, guest) => sum + guest.given,
+        );
   }
 
   static double totalTaken(int weddingId) {
     return loadGuests()
-        .where((g) => g.weddingId == weddingId)
-        .fold(0, (s, g) => s + g.taken);
+        .where(
+          (guest) => guest.weddingId == weddingId,
+        )
+        .fold(
+          0.0,
+          (sum, guest) => sum + guest.taken,
+        );
   }
 
   static int totalGuests(int weddingId) {
     return loadGuests()
-        .where((g) => g.weddingId == weddingId)
+        .where(
+          (guest) => guest.weddingId == weddingId,
+        )
         .length;
   }
 
@@ -60,29 +102,56 @@ class OfflineService {
     return totalGiven(weddingId) - totalTaken(weddingId);
   }
 
-  // 🔍 Search (Hindi + English)
-  static List<Guest> searchGuests(String query, int weddingId) {
-    final q = query.toLowerCase();
-    return loadGuests().where((g) =>
-        g.weddingId == weddingId &&
-        (g.nameEn.toLowerCase().contains(q) ||
-         g.nameHi.toLowerCase().contains(q) ||
-         g.addressEn.toLowerCase().contains(q) ||
-         g.addressHi.toLowerCase().contains(q))
-    ).toList();
+  // ============================================================
+  // SEARCH
+  // ============================================================
+
+  static List<Guest> searchGuests(
+    String query,
+    int weddingId,
+  ) {
+    final q = query.trim().toLowerCase();
+
+    return loadGuests()
+        .where(
+          (guest) =>
+              guest.weddingId == weddingId &&
+              (
+                guest.nameEn.toLowerCase().contains(q) ||
+                guest.nameHi.toLowerCase().contains(q) ||
+                guest.addressEn.toLowerCase().contains(q) ||
+                guest.addressHi.toLowerCase().contains(q)
+              ),
+        )
+        .toList();
   }
 
-  // 📦 Backup
+  // ============================================================
+  // BACKUP
+  // ============================================================
+
   static List<Map<String, dynamic>> exportBackup() {
-    return loadGuests().map((g) => g.toJson()).toList();
+    return loadGuests()
+        .map(
+          (guest) => guest.toJson(),
+        )
+        .toList();
   }
 
-  // ♻ Restore
-  static void importBackup(List<Map<String, dynamic>> data) {
-    final box = Hive.box(boxName);
-    for (var g in data) {
-      final guest = Guest.fromJson(g);
-      box.put(guest.id, jsonEncode(guest.toJson()));
+  // ============================================================
+  // RESTORE BACKUP
+  // ============================================================
+
+  static Future<void> importBackup(
+    List<Map<String, dynamic>> data,
+  ) async {
+    for (final json in data) {
+      final guest = Guest.fromJson(json);
+
+      await _box.put(
+        guest.localId,
+        guest,
+      );
     }
   }
 }

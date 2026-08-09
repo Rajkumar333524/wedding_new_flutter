@@ -27,6 +27,7 @@ class GuestAdapter extends TypeAdapter<Guest> {
       giftEn: fields[7] as String,
       giftHi: fields[8] as String,
       given: fields[9] as double,
+      taken: (fields[12] as num?)?.toDouble() ?? 0,
       type: fields[10] as String,
       date: fields[11] as DateTime,
     );
@@ -36,6 +37,7 @@ class GuestAdapter extends TypeAdapter<Guest> {
   void write(BinaryWriter writer, Guest obj) {
     writer
       ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.localId)
       ..writeByte(1)
@@ -60,6 +62,8 @@ class GuestAdapter extends TypeAdapter<Guest> {
       ..write(obj.type)
       ..writeByte(11)
       ..write(obj.date);
+      ..writeByte(12)
+      ..write(obj.taken);
   }
 
   @override

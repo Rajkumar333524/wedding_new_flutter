@@ -20,33 +20,53 @@ class Wedding {
     required this.date,
   });
 
-  /// 🔽 BACKEND → APP (Crash-Proof)
+  // ============================================================
+  // BACKEND → APP
+  // ============================================================
+
   factory Wedding.fromJson(Map<String, dynamic> j) {
     return Wedding(
-      id: j['id'] ?? 0,
+      id: int.tryParse(
+            j['id']?.toString() ?? '0',
+          ) ??
+          0,
 
-      brideNameEn: j['bride_name_en'] ?? '',
-      groomNameEn: j['groom_name_en'] ?? '',
+      brideNameEn:
+          j['bride_name_en']?.toString() ??
+          j['bride_name']?.toString() ??
+          '',
 
-      brideNameHi: j['bride_name_hi'] ?? '',
-      groomNameHi: j['groom_name_hi'] ?? '',
+      groomNameEn:
+          j['groom_name_en']?.toString() ??
+          j['groom_name']?.toString() ??
+          '',
 
-      location: j['location'] ?? '',
-      date: j['date'] ?? '',
+      brideNameHi:
+          j['bride_name_hi']?.toString() ??
+          j['bride_name']?.toString() ??
+          '',
+
+      groomNameHi:
+          j['groom_name_hi']?.toString() ??
+          j['groom_name']?.toString() ??
+          '',
+
+      location: j['location']?.toString() ?? '',
+
+      date: j['date']?.toString() ?? '',
     );
   }
 
-  /// 🔼 APP → BACKEND (100% Compatible)
-  Map<String, dynamic> toJson() => {
-        "id": id,
+  // ============================================================
+  // APP → BACKEND
+  // ============================================================
 
-        "bride_name_en": brideNameEn,
-        "groom_name_en": groomNameEn,
-
-        "bride_name_hi": brideNameHi,
-        "groom_name_hi": groomNameHi,
-
-        "location": location,
-        "date": date,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'bride_name': brideNameEn,
+      'groom_name': groomNameEn,
+      'location': location,
+      'date': date,
+    };
+  }
 }

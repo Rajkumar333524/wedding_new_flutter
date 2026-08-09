@@ -12,6 +12,12 @@ class _LockScreenState extends State<LockScreen> {
   final ctrl = TextEditingController();
   String msg = "";
 
+  @override
+  void dispose() {
+  ctrl.dispose();
+  super.dispose();
+}
+
   Future<void> unlock() async {
     final ok = await PinService.verify(ctrl.text);
     if (ok) {

@@ -10,36 +10,40 @@ import 'security/app_guard.dart';
 
 import 'screens/wedding_list_screen.dart';
 import 'screens/add_wedding_screen.dart';
-
-// Future Screens
-// import 'screens/login_screen.dart';
-// import 'screens/register_screen.dart';
-// import 'screens/dashboard_screen.dart';
-// import 'screens/fast_entry_screen.dart';
+import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ===========================
-  // Hive Initialization
-  // ===========================
+  // ============================================================
+  // HIVE INITIALIZATION
+  // ============================================================
 
   await Hive.initFlutter();
 
-  Hive.registerAdapter(GuestAdapter());
+  if (!Hive.isAdapterRegistered(1)) {
+    Hive.registerAdapter(GuestAdapter());
+  }
 
   await HiveService.init();
 
-  await Hive.openBox<Guest>('pendingSync');
+  // Offline pending sync
+  if (!Hive.isBoxOpen('pendingSync')) {
+    await Hive.openBox<Guest>('pendingSync');
+  }
 
-  // ===========================
-  // Authentication Init
-  // ===========================
+  // ============================================================
+  // AUTHENTICATION INITIALIZATION
+  // ============================================================
 
   await AuthService.init();
 
   runApp(const AppRoot());
 }
+
+// ============================================================
+// APP ROOT
+// ============================================================
 
 class AppRoot extends StatelessWidget {
   const AppRoot({super.key});
@@ -52,36 +56,40 @@ class AppRoot extends StatelessWidget {
   }
 }
 
+// ============================================================
+// WEDDING APP
+// ============================================================
+
 class WeddingApp extends StatelessWidget {
   const WeddingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bool loggedIn = AuthService.isLoggedIn();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      title: "Wedding Register Pro",
+      title: 'Wedding Register Pro',
 
       theme: ThemeData(
         useMaterial3: true,
-
         colorSchemeSeed: Colors.deepOrange,
-
         scaffoldBackgroundColor: Colors.white,
       ),
 
-      initialRoute: "/",
+      home: loggedIn
+          ? const WeddingListScreen()
+          : const LoginScreen(),
 
       routes: {
-        "/": (context) => const WeddingListScreen(),
+        '/login': (_) => const LoginScreen(),
 
-        "/add-wedding": (context) => const AddWeddingScreen(),
+        '/': (_) => loggedIn
+            ? const WeddingListScreen()
+            : const LoginScreen(),
 
-        // Future
-        // "/login": (context)=>const LoginScreen(),
-        // "/register": (context)=>const RegisterScreen(),
-        // "/dashboard": (context)=>const DashboardScreen(),
-        // "/fast-entry": (context)=>const FastEntryScreen(),
+        '/add-wedding': (_) => const AddWeddingScreen(),
       },
     );
   }
