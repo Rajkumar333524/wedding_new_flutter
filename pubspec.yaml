@@ -37,7 +37,7 @@ dependencies:
   open_file: ^3.3.2
 
   # File Picker
-  file_picker: ^6.1.1
+  file_picker: ^11.0.2
 
   # Google
   google_sign_in: ^6.2.1
