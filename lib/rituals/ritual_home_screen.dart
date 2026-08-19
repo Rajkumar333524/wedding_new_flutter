@@ -23,6 +23,15 @@ class _RitualHomeScreenState extends State<RitualHomeScreen> {
   final FocusNode f4 = FocusNode();
 
   @override
+void dispose() {
+  f1.dispose();
+  f2.dispose();
+  f3.dispose();
+  f4.dispose();
+  super.dispose();
+}
+
+  @override
   void initState() {
     super.initState();
     Future.delayed(Duration.zero, () => FocusScope.of(context).requestFocus(f1));
@@ -39,65 +48,116 @@ class _RitualHomeScreenState extends State<RitualHomeScreen> {
           elevation: 0,
         ),
 
-        body: Stack(
-          children: [
+       body: Stack(
+  children: [
 
-            /// 🔽 WeddingListScreen jaisa exact bottom aligned panel
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: GlassPanel(
-                  child: SizedBox(
-                    width: 800,      // 👈 Same width
-                    height: 320,     // 👈 Same height
-                    child: Container(
-                      padding: const EdgeInsets.all(26),
-                      decoration: _card(),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
+    Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 8,
+          right: 8,
+          bottom: 12,
+        ),
+        child: GlassPanel(
+          child: SizedBox(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.68,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: _card(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
 
-                          const Text(
-                            "Ritual Dashboard",
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                          ),
+                    const SizedBox(height: 5),
 
-                          const SizedBox(height: 30),
-
-                          _btn("🧧 Paupuji Entry", _gold, f1, () {
-                            Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const PaupujiScreen()));
-                          }),
-
-                          const SizedBox(height: 14),
-
-                          _btn("📜 Paupuji Register", _silver, f2, () {
-                            Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const PaupujiRegisterScreen()));
-                          }),
-
-                          const SizedBox(height: 20),
-
-                          _btn("🤵 Groom / Jijaji Entry", _royalPurple, f3, () {
-                            Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const GroomScreen()));
-                          }),
-
-                          const SizedBox(height: 14),
-
-                          _btn("📒 Groom Register", _softGold, f4, () {
-                            Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const GroomRegisterScreen()));
-                          }),
-                        ],
+                    const Text(
+                      "Ritual Dashboard",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 24),
+
+                    _btn(
+                      "🧧 Paupuji Entry",
+                      _gold,
+                      f1,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PaupujiScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    _btn(
+                      "📜 Paupuji Register",
+                      _silver,
+                      f2,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const PaupujiRegisterScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    _btn(
+                      "🤵 Groom / Jijaji Entry",
+                      _royalPurple,
+                      f3,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const GroomScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    _btn(
+                      "📒 Groom Register",
+                      _softGold,
+                      f4,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const GroomRegisterScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 15),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
+        ),
+      ),
+    ),
+  ],
+),
         ),
       ),
     );
@@ -116,8 +176,8 @@ class _RitualHomeScreenState extends State<RitualHomeScreen> {
         return KeyEventResult.ignored;
       },
       child: SizedBox(
-        width: 420,
-        child: ElevatedButton(
+        width: double.infinity,
+         child: ElevatedButton(
           onPressed: onTap,
           style: ElevatedButton.styleFrom(
             backgroundColor: color,
