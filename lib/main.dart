@@ -11,6 +11,7 @@ import 'security/app_guard.dart';
 import 'screens/wedding_list_screen.dart';
 import 'screens/add_wedding_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/about_developer_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
