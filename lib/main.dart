@@ -91,6 +91,7 @@ class WeddingApp extends StatelessWidget {
             : const LoginScreen(),
 
         '/add-wedding': (_) => const AddWeddingScreen(),
+        '/about': (_) => const AboutDeveloperScreen(),
       },
     );
   }
