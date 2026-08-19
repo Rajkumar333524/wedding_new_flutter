@@ -194,25 +194,24 @@ class ApiService {
     await _handleResponse(res);
   }
 
-  static Future<void> deleteGuest(
-    int id,
-  ) async {
-    if (id <= 0) {
-      throw Exception(
-        'Invalid guest ID',
-      );
-    }
-
-    final res = await http.delete(
-      Uri.parse(
-        '$baseUrl/delete_guest/$id/', 
-      ),
-       headers: AuthService.authHeaders,
+ static Future<void> deleteGuest(
+  int id,
+) async {
+  if (id <= 0) {
+    throw Exception(
+      'Invalid guest ID',
     );
-
-    await _handleResponse(res);
   }
 
+  final res = await http.delete(
+    Uri.parse(
+      '$baseUrl/delete_guest/$id/',
+    ),
+    headers: AuthService.authHeaders,
+  );
+
+  await _handleResponse(res);
+}
   // ============================================================
   // TAKEN MONEY
   // ============================================================
