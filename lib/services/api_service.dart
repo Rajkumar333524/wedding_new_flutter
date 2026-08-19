@@ -75,6 +75,7 @@ class ApiService {
   static Future<List<Wedding>> getWeddings() async {
     final res = await http.get(
       Uri.parse('$baseUrl/get_weddings/'),
+      headers: AuthService.authHeaders,
     );
 
     final decoded = await _handleResponse(res);
@@ -111,6 +112,7 @@ class ApiService {
   ) async {
     final res = await http.delete(
       Uri.parse('$baseUrl/delete_wedding/$id/'),
+      headers: AuthService.authHeaders,
     );
 
     await _handleResponse(res);
@@ -125,6 +127,7 @@ class ApiService {
   ) async {
     final res = await http.get(
       Uri.parse('$baseUrl/get_guests/$weddingId/'),
+      headers: AuthService.authHeaders,
     );
 
     final decoded = await _handleResponse(res);
@@ -203,6 +206,7 @@ class ApiService {
     final res = await http.delete(
       Uri.parse(
         '$baseUrl/delete_guest/$id/',
+        headers: AuthService.authHeaders,
       ),
     );
 
@@ -220,6 +224,7 @@ class ApiService {
       Uri.parse(
         '$baseUrl/get_taken_money/$weddingId/',
       ),
+      headers: AuthService.authHeaders,
     );
 
     final decoded = await _handleResponse(res);
@@ -266,6 +271,7 @@ class ApiService {
       Uri.parse(
         '$baseUrl/delete_taken_money/$id/',
       ),
+       headers: AuthService.authHeaders,
     );
 
     await _handleResponse(res);
