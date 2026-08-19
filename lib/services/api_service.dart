@@ -205,9 +205,9 @@ class ApiService {
 
     final res = await http.delete(
       Uri.parse(
-        '$baseUrl/delete_guest/$id/',
-        headers: AuthService.authHeaders,
+        '$baseUrl/delete_guest/$id/', 
       ),
+       headers: AuthService.authHeaders,
     );
 
     await _handleResponse(res);
