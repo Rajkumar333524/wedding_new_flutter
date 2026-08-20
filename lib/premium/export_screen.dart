@@ -9,9 +9,6 @@ import '../ui/glass_panel.dart';
 
 import '../services/export_service.dart';
 import '../services/api_service.dart';
-
-import '../models/wedding.dart';
-
 import 'offline_service.dart';
 
 class ExportScreen extends StatefulWidget {
@@ -29,16 +26,9 @@ class _ExportScreenState extends State<ExportScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(msg)),
     );
   }
-
-  // ============================================================
-  // BACKUP
-  // ============================================================
 
   Future<void> backupNow() async {
     setState(() {
@@ -48,40 +38,31 @@ class _ExportScreenState extends State<ExportScreen> {
 
     try {
       final file = await OfflineService.createBackup();
-
-      show(
-        "Backup saved successfully\n${file.path}",
-      );
+      show("Backup saved: ${file.path}");
     } catch (e) {
       show("Backup error: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          working = false;
-          status = "";
-        });
+        setState(() => working = false);
       }
     }
   }
 
-  // ============================================================
-  // RESTORE
-  // ============================================================
-
   Future<void> restoreNow() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
+    // FIX: file_picker ^11.0.2 ke liye
+    // current project me ye API use kar rahe hain.
+    final result = await FilePicker.pickFiles();
 
-    if (result == null ||
-        result.files.single.path == null) {
+    if (result == null) return;
+
+    final filePath = result.files.single.path;
+
+    if (filePath == null || filePath.isEmpty) {
+      show("Backup file select nahi hui.");
       return;
     }
 
-    final file = File(
-      result.files.single.path!,
-    );
+    final file = File(filePath);
 
     setState(() {
       working = true;
@@ -90,276 +71,59 @@ class _ExportScreenState extends State<ExportScreen> {
 
     try {
       await OfflineService.restoreBackup(file);
-
-      show(
-        "Backup restored successfully",
-      );
+      show("Backup restored successfully");
     } catch (e) {
       show("Restore error: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          working = false;
-          status = "";
-        });
+        setState(() => working = false);
       }
     }
   }
-
-  // ============================================================
-  // GET WEDDINGS
-  // ============================================================
-
-  Future<List<Wedding>> _loadWeddings() async {
-    return ApiService.getWeddings();
-  }
-
-  // ============================================================
-  // PDF EXPORT
-  // ============================================================
 
   Future<void> exportPdf() async {
     setState(() {
       working = true;
-      status = "Loading Weddings...";
+      status = "Exporting PDF...";
     });
 
     try {
-      final weddings = await _loadWeddings();
+      final weddings = await ApiService.getWeddings();
 
-      if (weddings.isEmpty) {
-        show("No wedding record found.");
-        return;
+      for (final w in weddings) {
+        await ExportService.exportWeddingPdf(w);
       }
 
-      if (!mounted) return;
-
-      final selected = await showDialog<Wedding>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text(
-              "Select Wedding",
-            ),
-            content: SizedBox(
-              width: 500,
-              height: 350,
-              child: ListView.builder(
-                itemCount: weddings.length,
-                itemBuilder: (_, index) {
-                  final w = weddings[index];
-
-                  return Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.favorite),
-                      ),
-                      title: Text(
-                        "${w.groomNameHi} ❤️ ${w.brideNameHi}",
-                      ),
-                      subtitle: Text(
-                        "${w.location}\n${w.date}",
-                      ),
-                      isThreeLine: true,
-                      onTap: () {
-                        Navigator.pop(
-                          dialogContext,
-                          w,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                    dialogContext,
-                  );
-                },
-                child: const Text("Cancel"),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (selected == null) {
-        return;
-      }
-
-      setState(() {
-        working = true;
-        status = "Generating Complete PDF...";
-      });
-
-      await ExportService.exportWeddingPdf(
-        selected,
-      );
-
-      show(
-        "Complete Wedding PDF opened successfully.",
-      );
+      show("PDF Export Completed");
     } catch (e) {
-      show(
-        "PDF Export error: $e",
-      );
+      show("PDF Export error: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          working = false;
-          status = "";
-        });
+        setState(() => working = false);
       }
     }
   }
-
-  // ============================================================
-  // EXCEL EXPORT
-  // ============================================================
 
   Future<void> exportExcel() async {
     setState(() {
       working = true;
-      status = "Creating Complete Excel Register...";
+      status = "Exporting Excel...";
     });
 
     try {
-      final weddings = await _loadWeddings();
+      final weddings = await ApiService.getWeddings();
 
-      if (weddings.isEmpty) {
-        show("No wedding record found.");
-        return;
-      }
+      await ExportService.exportWeddingsToExcel(weddings);
 
-      await ExportService.exportWeddingsToExcel(
-        weddings,
-      );
-
-      show(
-        "Complete Excel Register created successfully.",
-      );
+      show("Excel Export Completed");
     } catch (e) {
-      show(
-        "Excel Export error: $e",
-      );
+      show("Excel Export error: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          working = false;
-          status = "";
-        });
+        setState(() => working = false);
       }
     }
   }
-
-  // ============================================================
-  // PRINT
-  // ============================================================
-
-  Future<void> printWedding() async {
-    setState(() {
-      working = true;
-      status = "Loading Wedding...";
-    });
-
-    try {
-      final weddings = await _loadWeddings();
-
-      if (weddings.isEmpty) {
-        show("No wedding record found.");
-        return;
-      }
-
-      if (!mounted) return;
-
-      final selected = await showDialog<Wedding>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text(
-              "Select Wedding to Print",
-            ),
-            content: SizedBox(
-              width: 500,
-              height: 350,
-              child: ListView.builder(
-                itemCount: weddings.length,
-                itemBuilder: (_, index) {
-                  final w = weddings[index];
-
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.print,
-                        color: Colors.blue,
-                      ),
-                      title: Text(
-                        "${w.groomNameHi} ❤️ ${w.brideNameHi}",
-                      ),
-                      subtitle: Text(
-                        w.location,
-                      ),
-                      onTap: () {
-                        Navigator.pop(
-                          dialogContext,
-                          w,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                    dialogContext,
-                  );
-                },
-                child: const Text("Cancel"),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (selected == null) {
-        return;
-      }
-
-      setState(() {
-        working = true;
-        status = "Opening Print Preview...";
-      });
-
-      await ExportService.printWedding(
-        selected,
-      );
-
-      show(
-        "Print preview opened.",
-      );
-    } catch (e) {
-      show(
-        "Print error: $e",
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          working = false;
-          status = "";
-        });
-      }
-    }
-  }
-
-  // ============================================================
-  // BUILD
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -367,164 +131,82 @@ class _ExportScreenState extends State<ExportScreen> {
       backgroundColor: Colors.transparent,
 
       appBar: AppBar(
-        title: const Text(
-          "Premium Export & Backup",
-        ),
-        backgroundColor:
-            const Color(0xff4A6CF7),
+        title: const Text("Premium Export & Backup"),
+        backgroundColor: const Color(0xff4A6CF7),
       ),
 
       body: BackgroundWrapper(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+          child: GlassPanel(
+            child: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "📦 Data Management",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
-            child: GlassPanel(
-              child: SizedBox(
-                width: 600,
+                  const SizedBox(height: 16),
 
-                child: Column(
-                  mainAxisSize:
-                      MainAxisSize.min,
-
-                  children: [
-                    const Text(
-                      "📦 Data Management",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
+                  if (working)
+                    Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 10),
+                        Text(status),
+                        const SizedBox(height: 10),
+                      ],
                     ),
 
-                    const SizedBox(
-                      height: 8,
-                    ),
+                  const SizedBox(height: 20),
 
-                    const Text(
-                      "Wedding Register Pro",
-                      style: TextStyle(
-                        fontSize: 15,
-                      ),
-                    ),
+                  _btn(
+                    "Create Backup",
+                    Icons.save,
+                    Colors.orange,
+                    backupNow,
+                  ),
 
-                    const SizedBox(
-                      height: 18,
-                    ),
+                  _btn(
+                    "Restore Backup",
+                    Icons.restore,
+                    Colors.purple,
+                    restoreNow,
+                  ),
 
-                    if (working)
-                      Container(
-                        padding:
-                            const EdgeInsets.all(
-                          14,
+                  _btn(
+                    "Cloud Backup",
+                    Icons.cloud,
+                    Colors.indigo,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CloudScreen(),
                         ),
-                        margin:
-                            const EdgeInsets.only(
-                          bottom: 16,
-                        ),
-                        decoration:
-                            BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(
-                            12,
-                          ),
-                          color: Colors.white
-                              .withOpacity(
-                            0.75,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth: 3,
-                              ),
-                            ),
-                            const SizedBox(
-                              width: 12,
-                            ),
-                            Expanded(
-                              child: Text(
-                                status,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      );
+                    },
+                  ),
 
-                    // BACKUP
-                    _btn(
-                      "Create Backup",
-                      Icons.save,
-                      Colors.orange,
-                      backupNow,
-                    ),
+                  _btn(
+                    "Export PDF",
+                    Icons.picture_as_pdf,
+                    Colors.red,
+                    exportPdf,
+                  ),
 
-                    // RESTORE
-                    _btn(
-                      "Restore Backup",
-                      Icons.restore,
-                      Colors.purple,
-                      restoreNow,
-                    ),
-
-                    // CLOUD
-                    _btn(
-                      "Cloud Backup",
-                      Icons.cloud,
-                      Colors.indigo,
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const CloudScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // PDF
-                    _btn(
-                      "Export Complete PDF",
-                      Icons.picture_as_pdf,
-                      Colors.red,
-                      exportPdf,
-                    ),
-
-                    // PRINT
-                    _btn(
-                      "Print Wedding Register",
-                      Icons.print,
-                      Colors.blue,
-                      printWedding,
-                    ),
-
-                    // EXCEL
-                    _btn(
-                      "Export Complete Excel",
-                      Icons.table_chart,
-                      Colors.green,
-                      exportExcel,
-                    ),
-
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    const Text(
-                      "PDF / Excel includes Wedding + Guest Register + Money Register",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
+                  _btn(
+                    "Export Excel",
+                    Icons.table_chart,
+                    Colors.green,
+                    exportExcel,
+                  ),
+                ],
               ),
             ),
           ),
@@ -533,56 +215,25 @@ class _ExportScreenState extends State<ExportScreen> {
     );
   }
 
-  // ============================================================
-  // BUTTON
-  // ============================================================
-
   Widget _btn(
-    String text,
-    IconData icon,
-    Color color,
-    VoidCallback action,
+    String t,
+    IconData i,
+    Color c,
+    VoidCallback f,
   ) {
     return Container(
-      margin:
-          const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       width: double.infinity,
-
       child: ElevatedButton.icon(
-        onPressed:
-            working ? null : action,
-
-        icon: Icon(icon),
-
-        label: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight:
-                FontWeight.w600,
+        icon: Icon(i),
+        label: Text(t),
+        onPressed: working ? null : f,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: c,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-        ),
-
-        style:
-            ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-
-          padding:
-              const EdgeInsets.symmetric(
-            vertical: 15,
-            horizontal: 18,
-          ),
-
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(
-              14,
-            ),
-          ),
-
-          elevation: 5,
         ),
       ),
     );
