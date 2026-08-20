@@ -19,43 +19,58 @@ class ApiService {
   // ============================================================
 
   static Future<Map<String, dynamic>> _handleResponse(
-    http.Response res,
-  ) async {
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      if (res.body.isEmpty) {
-        return {};
-      }
+  http.Response res,
+) async {
+  // ============================================================
+  // SESSION EXPIRED / UNAUTHORIZED
+  // ============================================================
 
-      try {
-        final decoded = jsonDecode(res.body);
+  if (res.statusCode == 401) {
+    await AuthService.logout();
 
-        if (decoded is Map<String, dynamic>) {
-          return decoded;
-        }
+    throw Exception(
+      'Session expired. Please login again.',
+    );
+  }
 
-        return {};
-      } catch (_) {
-        return {};
-      }
+  // ============================================================
+  // SUCCESS RESPONSE
+  // ============================================================
+
+  if (res.statusCode >= 200 && res.statusCode < 300) {
+    if (res.body.isEmpty) {
+      return {};
     }
-
-    String message = res.body;
 
     try {
       final decoded = jsonDecode(res.body);
 
-      if (decoded is Map && decoded['message'] != null) {
-        message = decoded['message'].toString();
-      } else if (decoded is Map && decoded['error'] != null) {
-        message = decoded['error'].toString();
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
       }
-    } catch (_) {}
 
-    throw Exception(
-      'Server error ${res.statusCode}: $message',
-    );
+      return {};
+    } catch (_) {
+      return {};
+    }
   }
 
+  String message = res.body;
+
+  try {
+    final decoded = jsonDecode(res.body);
+
+    if (decoded is Map && decoded['message'] != null) {
+      message = decoded['message'].toString();
+    } else if (decoded is Map && decoded['error'] != null) {
+      message = decoded['error'].toString();
+    }
+  } catch (_) {}
+
+  throw Exception(
+    'Server error ${res.statusCode}: $message',
+  );
+}
   // ============================================================
   // TEST BACKEND
   // ============================================================
