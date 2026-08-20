@@ -32,9 +32,12 @@ class AuthService {
   // STATUS
   // ============================================================
 
-  static bool isLoggedIn() {
-    return _user != null && _accessToken != null;
-  }
+ static bool isLoggedIn() {
+  return _user != null &&
+      _user!.isNotEmpty &&
+      _accessToken != null &&
+      _accessToken!.isNotEmpty;
+}
 
   static String? get currentUser => _user;
 
