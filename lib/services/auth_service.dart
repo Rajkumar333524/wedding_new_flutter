@@ -84,8 +84,18 @@ class AuthService {
       );
     }
 
-    _user = phone.trim();
-    _accessToken = data['access']?.toString();
+   _user = phone.trim();
+
+    _accessToken =
+    data['access']?.toString() ??
+    data['access_token']?.toString() ??
+    data['token']?.toString();
+
+    if (_accessToken == null || _accessToken!.isEmpty) {
+       throw Exception(
+      'Login successful, but authentication token was not received from server.',
+    );
+  }
 
     final pref = await SharedPreferences.getInstance();
 
